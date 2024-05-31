@@ -1,4 +1,4 @@
-# Floridaenema
+# Assemble, bin, and refine the cyanobacterial genomes
 
 ## Packages used 
 [fastQC](https://github.com/s-andrews/FastQC)
@@ -7,10 +7,6 @@
 [megahit](https://github.com/voutcn/megahit)
 [Quast](https://github.com/ablab/quast)
 [BASALT](https://github.com/EMBL-PKU/BASALT)
-[gtdbtk](https://github.com/Ecogenomics/GTDBTk)
-[CheckM2](https://github.com/chklovski/CheckM2)
-[CoverM](https://github.com/wwood/CoverM)
-[SeqTK](https://github.com/lh3/seqtk)
 
 ## First lets run QC on the data
 ```
@@ -76,6 +72,7 @@ for SAMPLE in $SAMPLES; do
 done
 ```
 ## BASALT
+This bins genomes and then refines them
 ```
 conda activate BASALT
 mkdir 04_BASALT
@@ -108,6 +105,13 @@ done
 ```
 cd ${SAMPLE} && BASALT -a ${SAMPLE}_contigs.fa -s ${SAMPLE}_1.fq,${SAMPLE}_2.fq -l ${SAMPLE}_lr.fq -t 8 -m 100 --min-cpn 80 --max-ctn 20 && cd ..
 ```
+# Genome quality and other stastics
+## Packages used 
+[gtdbtk](https://github.com/Ecogenomics/GTDBTk)
+[CheckM2](https://github.com/chklovski/CheckM2)
+[CoverM](https://github.com/wwood/CoverM)
+[SeqTK](https://github.com/lh3/seqtk)
+
 ## Rename Bins and move them
 ```
 main_directory="/blue/hlaughinghouse/flefler/BLCC_Genomes/04_BASALT"
@@ -137,6 +141,7 @@ done
 find /blue/hlaughinghouse/flefler/BLCC_Genomes/05_GENOMES -type f -print0 | xargs -0 gzip
 ```
 ## CheckM2
+Used to assess completion and contamination
 ```
 conda activate checkm2
 mkdir 06_checkM
@@ -145,8 +150,8 @@ mkdir 06_checkM
 N="checkm2"
 checkm2 predict --threads 28 --input 05_GENOMES --output-directory 06_checkM -x .fa.gz --quiet --remove_intermediates
 ```
-
 ## CoverM
+Used to determine mean coverage
 ```
 conda activate reassemble
 mkdir 07_BAMFILES
@@ -161,6 +166,7 @@ for SAMPLE in $SAMPLES; do
 done
 ```
 ## GTDB
+Used to assign taxonomy
 ```
 conda activate gtdbtk-2.4.0
 mkdir 08_gtdbtk
@@ -169,6 +175,7 @@ gtdbtk classify_wf --genome_dir 05_GENOMES --mash_db /blue/hlaughinghouse/flefle
 ```
 
 ## SeqTK
+Used to gather other stats, e.g., N50, length
 ```
 conda activate reassemble
 
@@ -192,4 +199,48 @@ csvtk concat -t *2.csv | csvtk tab2csv | csvtk filter2 -f '$file!="unmapped"' -o
 csvtk join -f 1 SeqTK_Output.csv coverm/coverMoutput.csv checkm/quality_report.csv gtdb/gtdbtk.bac120.summary.csv -o merged.csv
 
 csvtk concat -k merged.csv process/selectedmags.csv -o genomeinfo_230524.csv
+```
+# Analyses
+## Packages used 
+[skani](https://github.com/bluenote-1577/skani)
+[ezaai](https://github.com/endixk/ezaai)
+[gtdbtk](https://github.com/Ecogenomics/GTDBTk)
+[ModelTest-NG](https://github.com/ddarriba/modeltest)
+[RAxML-NG](https://github.com/amkozlov/raxml-ng)
+[GToTree](https://github.com/AstrobioMike/GToTree)
+[IQ-TREE](https://github.com/iqtree/iqtree2)
+
+## ANI
+We used skani to determine ANI and AF between genomes
+```
+skani dist -t 3 -q Genomes/*.fa -r Genomes/*.fa -s 70 --medium -o new_ANI/all-to-all_results.txt
+```
+
+## Create a large phylogenomic tree
+We used GTDB to to create a concatenated alignment of the filamentous cyanobacterial families and orders in GTDB with *Gloeobacter* as the outgroup
+```
+gtdbtk de_novo_wf --genome_dir /media/HDD_4T/Forrest/floridaenema/stuff/Genomes/BLCC_genomes -x fa --bacteria --outgroup_taxon g__Gloeobacter \
+--taxa_filter f__Coleofasciculaceae,f__Desertifilaceae,f__Microcoleaceae,f__Oscillatoriaceae,f__Phormidiaceae_A,f__PCC-6304,f__Geitlerinemaceae,f__Geitlerinemaceae_A,f__Spirulinaceae,g__Oculatella,g__Elainella,f__FACHB-T130,o__Phormidesmiales,g__Gloeobacter \
+--write_single_copy_genes --cpus 4 --out_dir /media/HDD_4T/Forrest/floridaenema/stuff/new_GTDB
+```
+Using modeltest-ng to detemine the evolutionary model
+```
+modeltest-ng -i Floridanema_.fasta -d aa -p 10 -t ml
+```
+Run the phylogenomic tree with raxml-NG
+```
+raxml-ng --all --msa Floridanema_.fasta --threads auto{10} --workers auto --model LG+I+G4+F --bs-trees autoMRE{1000} --tree Floridanema_.fasta.tree --prefix Floridanema_tree
+```
+
+## Creating a more refined phylogenomic tree of the Aerosakkonematales 
+Using GToTree and iqtree
+fasta_files.txt is a file which contains the paths to the genomes of interest
+```
+GToTree -f fasta_files.txt -H Cyanobacteria -N -n 16 -j 4 -o /media/HDD_4T/Forrest/floridaenema/stuff/new_GToTree/GToTree_Floridaenema -F
+```
+feed the GToTree output to iqtree, runs a model on each partition
+```
+iqtree -s /media/HDD_4T/Forrest/floridaenema/stuff/new_GToTree/GToTree_Floridaenema/Aligned_SCGs.faa \
+       -p /media/HDD_4T/Forrest/floridaenema/stuff/new_GToTree/GToTree_Floridaenema/run_files/Partitions.txt \
+       -m MFP -B 1000 -pre iqtree_out
 ```
