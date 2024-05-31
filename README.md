@@ -244,3 +244,92 @@ iqtree -s /media/HDD_4T/Forrest/floridaenema/stuff/new_GToTree/GToTree_Floridaen
        -p /media/HDD_4T/Forrest/floridaenema/stuff/new_GToTree/GToTree_Floridaenema/run_files/Partitions.txt \
        -m MFP -B 1000 -pre iqtree_out
 ```
+
+# Making ANI and AAI figures in ```R```
+
+## Install and load packages 
+```
+library(devtools)
+install_github("jokergoo/ComplexHeatmap")
+install_github("GuangchuangYu/ggtree")
+install.packages("tidyverse")
+
+library(tidyverse)
+library(ggtree)
+library(ComplexHeatmap)
+```
+## Upload and edit the phylogenomic tree of the Aerosakkonematales 
+There is probably a more effective way to do this, but if it aint broke dont fix it
+```
+tree = ggtree::read.tree("Floridaenema_GToTree.nwk")
+
+dendrogram <- ape::chronos(tree2)
+row_cluster <- as.hclust(dendrogram)
+col_cluster <- as.hclust(dendrogram)
+
+ordered_data <- result_df[tree2$tip.label, tree2$tip.label]
+
+row.names(ordered_data)
+
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F154"] <- "F. flavialum BLCC-F154"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F50"] <- "F. flaviceps BLCC-F50"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F46"] <- "F. aerugineus BLCC-F46"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F167"] <- "F. evergladium BLCC-F167"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F43"] <- "Microseira sp. BLCC-F43"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F2"] <- "Ae. funiforme BLCC-F2"
+row.names(ordered_data)[row.names(ordered_data) == "BLCC_F183"] <- "Ae. funiforme BLCC-F183"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_014696265.1"] <- "Aerosakkonema sp. FACHB-1375"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_949128025.1_PMM_0008_genomic"] <- "Argonema sp. MAG PMM_0008"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_949127755.1_PMM_0001_genomic"] <- "Argonema sp. MAG PMM_0001"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_023333585.1"] <- "Ar. antarcticum A004/B2"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_023333595.1"] <- "Ar. galeatum A003/A1"
+row.names(ordered_data)[row.names(ordered_data) == "GCA_003486305.1"] <- "Microseira sp. UBA11371" #Cyanobacteria bacterium UBA11371 
+row.names(ordered_data)[row.names(ordered_data) == "GCA_003486675.1"] <- "Microseira sp. UBA11372" #    Cyanobacteria bacterium UBA11372 
+row.names(ordered_data)[row.names(ordered_data) == "GCA_001904725.1"] <- "Floridaenema sp. IAM M-71" #Phormidium ambiguum IAM M-71
+row.names(ordered_data)[row.names(ordered_data) == "GCA_015207735.1"] <- "Floridaenema sp. LEGE 05292" #Phormidium sp. LEGE 05292
+row.names(ordered_data)[row.names(ordered_data) == "GCA_020521235.1"] <- "M. wollei NIES-4236 "
+
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F154"] <- "F. flavialum BLCC-F154"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F50"] <- "F. flaviceps BLCC-F50"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F46"] <- "F. aerugineus BLCC-F46"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F167"] <- "F. evergladium BLCC-F167"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F43"] <- "Microseira sp. BLCC-F43"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F2"] <- "Ae. funiforme BLCC-F2"
+colnames(ordered_data)[colnames(ordered_data) == "BLCC_F183"] <- "Ae. funiforme BLCC-F183"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_014696265.1"] <- "Aerosakkonema sp. FACHB-1375"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_949128025.1_PMM_0008_genomic"] <- "Argonema sp. MAG PMM_0008"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_949127755.1_PMM_0001_genomic"] <- "Argonema sp. MAG PMM_0001"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_023333585.1"] <- "Ar. antarcticum A004/B2"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_023333595.1"] <- "Ar. galeatum A003/A1"
+colnames(ordered_data)[colnames(ordered_data) == "GCA_003486305.1"] <- "Microseira sp. UBA11371" #Cyanobacteria bacterium UBA11371 
+colnames(ordered_data)[colnames(ordered_data) == "GCA_003486675.1"] <- "Microseira sp. UBA11372" #    Cyanobacteria bacterium UBA11372 
+colnames(ordered_data)[colnames(ordered_data) == "GCA_001904725.1"] <- "Floridaenema sp. IAM M-71" #Phormidium ambiguum IAM M-71
+colnames(ordered_data)[colnames(ordered_data) == "GCA_015207735.1"] <- "Floridaenema sp. LEGE 05292" #Phormidium sp. LEGE 05292
+colnames(ordered_data)[colnames(ordered_data) == "GCA_020521235.1"] <- "M. wollei NIES-4236 "
+```
+
+## Load ANI and AAI results
+```
+ani <- read.delim("all-to-all_results.txt") %>% select(c(Ref_file, Query_file, ANI))
+
+ani_result_df <- ani %>% pivot_wider(names_from = Ref_file, values_from = ANI, values_fn = mean) %>% column_to_rownames(var = "Query_file")
+
+aai <- read.delim("AAI_output.tsv") %>% select(c(Label.1, Label.2, AAI))
+
+aai_result_df <- aai %>% pivot_wider(names_from = Label.1, values_from = AAI, values_fn = mean) %>% column_to_rownames(var = "Label.2")
+```
+
+## Create and plot the heatmaps
+```
+p1 = ComplexHeatmap::pheatmap(as.matrix(ordered_data), legend_breaks = c(70,100), display_numbers = TRUE,
+                              number_color = "black", cluster_rows = row_cluster, cluster_cols = col_cluster, fontsize_col = 8,
+                              fontsize_number = 6, name = "ANI", angle_col = "45", number_format = "%.1f", column_title = "ANI")
+
+p2 = ComplexHeatmap::pheatmap(as.matrix(ordered_data), legend_breaks = c(70,100), display_numbers = TRUE,
+                              number_color = "black", cluster_rows = row_cluster, cluster_cols = col_cluster, fontsize_col = 8,
+                              fontsize_number = 6, name = "AAI", angle_col = "45", number_format = "%.1f", column_title = "AAI")
+
+p1 + p2
+```
+
+
